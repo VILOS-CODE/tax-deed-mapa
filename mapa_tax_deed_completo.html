@@ -1,0 +1,67 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Mapa Interactivo de Tax Deed por Estado</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/topojson@3"></script>
+  <script src="tax_data_embed.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 0; }
+    .tooltip {
+      position: absolute;
+      background: #fff;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      pointer-events: none;
+      max-width: 300px;
+    }
+    svg { width: 100%; height: 95vh; }
+  </style>
+</head>
+<body>
+  <h2 style="text-align:center">Mapa Interactivo de Estados - Tax Deed y Tax Lien</h2>
+  <div id="tooltip" class="tooltip" style="display:none;"></div>
+  <svg id="map"></svg>
+
+  <script>
+    const width = 960;
+    const height = 600;
+
+    const svg = d3.select("#map").attr("viewBox", [0, 0, width, height]);
+    const tooltip = d3.select("#tooltip");
+
+    d3.json("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json").then(us => {
+      const states = topojson.feature(us, us.objects.states).features;
+      const projection = d3.geoAlbersUsa().fitSize([width, height], { type: "FeatureCollection", features: states });
+      const path = d3.geoPath().projection(projection);
+
+      svg.selectAll("path")
+        .data(states)
+        .join("path")
+        .attr("d", path)
+        .attr("fill", d => taxData[d.properties.name]?.sistema ? "#4caf50" : "#e0e0e0")
+        .attr("stroke", "#333")
+        .on("mouseover", (event, d) => {
+          const data = taxData[d.properties.name];
+          if (data?.sistema) {
+            tooltip.style("display", "block").html(
+              `<strong>${d.properties.name}</strong><br>
+               <b>Sistema:</b> ${data.sistema}<br>
+               <b>Redención:</b> ${data.redencion}<br>
+               <b>Enlace:</b> <a href="${data.enlace}" target="_blank">ver</a><br>
+               <b>Notas:</b> ${data.nota}`
+            );
+          }
+        })
+        .on("mousemove", event => {
+          tooltip.style("left", (event.pageX + 10) + "px")
+                 .style("top", (event.pageY - 28) + "px");
+        })
+        .on("mouseout", () => tooltip.style("display", "none"));
+    });
+  </script>
+</body>
+</html>
